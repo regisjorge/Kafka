@@ -1,0 +1,13 @@
+
+drop stream if exists person_vp_above_persistent_stream delete topic;
+
+create stream if not exists person_vp_above_persistent_stream
+with(kafka_topic='person_vp_above',partitions=3,replicas=1,key_format='kafka',value_format='json') 
+as select emp_id,name,age,title,height from person where title in ('VP','SVP') emit changes;
+
+
+drop table if exists person_title_persistent_table;
+
+create table if not exists person_title_persistent_table
+with(kafka_topic='person_title_count',partitions=3,replicas=1,key_format='kafka',value_format='json') 
+ as select title,count(*) as count from person group by title emit changes;

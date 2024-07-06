@@ -1,0 +1,58 @@
+--drop stream cascaded delete topic
+DROP STREAM IF EXISTS PERSON DELETE TOPIC;
+CREATE STREAM PERSON(
+	EMP_ID   STRING KEY,
+	NAME     STRING,
+    AGE      INT,
+	TITLE	 VARCHAR,
+	HEIGHT   DECIMAL(6,2),
+	FRIENDS  ARRAY<STRING>,
+	CHILDREN MAP<STRING,INT>,
+	ADDRESS  ADDRESS
+)
+WITH (
+	kafka_topic='person',
+	key_format='kafka',
+	value_format='json',
+	PARTITIONS=3,
+    REPLICAS=1
+);
+
+--insert more data
+insert into PERSON(emp_id,name,age,title,height,friends,children,address)
+values('P004','Susan',28,'Director',179.5,Array['Alex','Alice','Jeff'],Map('X':=3,'Y':=6),STRUCT(COUNTRY:='US',PROVINCE:='NY',CITY:='MH'));
+insert into PERSON(emp_id,name,age,title,height,friends,children,address)
+values('P005','Alice',45,'Manager',161,Array['Alex','Ben','Jeff'],Map('X':=3,'Y':=6),STRUCT(COUNTRY:='UK',PROVINCE:='LD',CITY:='XY'));
+insert into PERSON(emp_id,name,age,title,height,friends,children,address)
+values('P006','Ramesh',33,'VP',183,Array['Alex','Ben','Jeff'],Map('X':=3,'Y':=6),STRUCT(COUNTRY:='IN',PROVINCE:='MM',CITY:='XY'));
+insert into PERSON(emp_id,name,age,title,height,friends,children,address)
+values('P007','Jeff',44,'VP',173,Array['Alex','Ben'],Map('X':=3,'Y':=6),STRUCT(COUNTRY:='HK',PROVINCE:='MM',CITY:='XY'));
+
+
+
+--select all data
+select * from person emit changes;
+--select specified columns
+select emp_id,name,age,title from person emit changes;
+
+--select and filter(where clause)
+select emp_id,name,age,title from person where age>35 emit changes;
+select emp_id,name,age,title from person where title='VP' emit changes;
+
+--select and filter by wildcards
+select emp_id,name,age,title from person where name like 'Jo%' emit changes;
+
+--Logical operators
+select * from person where name like '%e%' AND title='VP'  emit changes;
+select * from person where age between 35 AND 45 emit changes;
+
+--limit
+select * from person emit changes limit 3;
+select * from person limit 3;
+
+--collections function apply
+select * from person where ARRAY_CONTAINS(friends,'Ben');
+select emp_id,name,explode(friends) as friend from person where name='Alice';
+
+
+SHOW QUERIES;

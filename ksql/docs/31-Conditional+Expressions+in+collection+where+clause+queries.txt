@@ -1,0 +1,38 @@
+drop stream if exists CONDITIONAL_EXPRESSION DELETE TOPIC;
+
+CREATE STREAM IF NOT EXISTS CONDITIONAL_EXPRESSION (
+	k varchar key,
+	v1 int,
+	v2 int,
+	v3 int
+) WITH(
+	kafka_topic='CONDITIONAL_EXPRESSION',
+	partitions=3,
+	replicas=1,
+	key_format='kafka',
+	value_format='json'
+);
+
+--COALESCE 
+
+SELECT k, COALESCE(v1,v2,v3,0) as v from CONDITIONAL_EXPRESSION emit changes;
+insert into CONDITIONAL_EXPRESSION values('Alex',38,37,39);
+insert into CONDITIONAL_EXPRESSION values('Jeff',null,37,39);
+insert into CONDITIONAL_EXPRESSION values('Ben',null,null,39);
+insert into CONDITIONAL_EXPRESSION values('Jack',null,null,null);
+
+--IFNULL
+SELECT k, IFNULL(v1,40) as v from CONDITIONAL_EXPRESSION emit changes;
+
+--NULLIF
+select K,NULLIF(v1,v2) from CONDITIONAL_EXPRESSION emit changes;
+
+--case statement
+SELECT K,
+	CASE
+		WHEN V1 IS NOT NULL THEN V1
+		WHEN V2 IS NOT NULL THEN V2
+		WHEN V3 IS NOT NULL THEN V3
+		ELSE 0
+	END AS V
+FROM CONDITIONAL_EXPRESSION EMIT CHANGES;

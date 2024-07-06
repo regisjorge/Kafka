@@ -1,0 +1,143 @@
+docker exec -it ksqldb-cli ksql http://ksqldb-server:8088
+
+--event time
+drop stream if exists event_timestamp_stream delete topic;
+
+CREATE STREAM event_timestamp_stream (
+    k VARCHAR KEY,
+    ts VARCHAR,
+    v1 INT,
+    v2 VARCHAR
+) WITH (
+    kafka_topic = 'event_timestamp',
+    partitions = 3,
+	replicas=1,
+    value_format = 'json'
+);
+
+INSERT INTO event_timestamp_stream (
+    k, ts, v1, v2
+) VALUES (
+    'k1', '2023-04-04 01:00:00', 0, 'a'
+);
+
+INSERT INTO event_timestamp_stream (
+    k, ts, v1, v2
+) VALUES (
+    'k2', '2023-04-04 02:00:00', 0, 'b'
+);
+
+SELECT * FROM event_timestamp_stream;
+
+//para ver registros anteriores
+SET 'auto.offset.reset' = 'earliest';
+
+//para voltar 
+SET 'auto.offset.reset' = 'latest';
+
+SELECT k,
+       ROWTIME,
+       TIMESTAMPTOSTRING(ROWTIME, 'yyyy-MM-dd HH:mm:ss.SSS') AS rowtime_formatted,
+       ts,
+       v1,
+       v2
+FROM event_timestamp_stream;
+--
+Your results should look similar to what is below with the exception of ROWTIME and ROWTIME_FORMATTED, 
+which will mirror your wall clock. Because you didn't yet instruct ksqlDB to use event-time, 
+ROWTIME is inherited from the underlying Kafka record. 
+Kafka's default is to set the timestamp at which the record was produced to the topic.
+--
+
+specify the rowtime
+drop stream if exists event_timestamp_stream2 delete topic;
+
+CREATE STREAM event_timestamp_stream2 WITH (
+    timestamp = 'ts',
+    timestamp_format = 'yyyy-MM-dd HH:mm:ss'
+)   AS
+    SELECT *
+    FROM event_timestamp_stream
+    EMIT CHANGES;
+	
+SELECT k,
+       ROWTIME,
+       TIMESTAMPTOSTRING(ROWTIME, 'yyyy-MM-dd HH:mm:ss.SSS') AS rowtime_formatted,
+       ts,
+       v1,
+       v2
+FROM event_timestamp_stream2
+EMIT CHANGES;
+
+Timestamps as long values
+
+drop stream if exists event_timestamp_stream3 delete topic;
+CREATE STREAM event_timestamp_stream3 (
+    k VARCHAR KEY,
+    ts BIGINT,
+    v1 INT,
+    v2 VARCHAR
+) WITH (
+    kafka_topic = 'event_timestamp_as_long_value',
+    partitions = 1,
+    value_format = 'avro',
+    timestamp = 'ts'
+);
+
+INSERT INTO event_timestamp_stream3 (
+    k, ts, v1, v2
+) VALUES (
+    'k1', 1680614135932, 0, 'a'
+);
+
+INSERT INTO event_timestamp_stream3 (
+    k, ts, v1, v2
+) VALUES (
+    'k2', 1680619353581, 1, 'b'
+);
+
+SELECT k,
+       ROWTIME,
+       ts,
+       TIMESTAMPTOSTRING(ROWTIME, 'yyyy-MM-dd HH:mm:ss.SSS') AS rowtime_formatted,
+       TIMESTAMPTOSTRING(ts, 'yyyy-MM-dd HH:mm:ss.SSS') AS ts_formatted,
+       v1,
+       v2
+FROM event_timestamp_stream3
+EMIT CHANGES;
+
+
+Timestamps represented by TIMESTAMP columns
+drop stream if exists event_timestamp_stream4 delete topic;
+CREATE STREAM event_timestamp_stream4 (
+    k VARCHAR KEY,
+    ts TIMESTAMP,
+    v1 INT,
+    v2 VARCHAR
+) WITH (
+    kafka_topic = 'event_timestamp_as_timestamp_value',
+    partitions = 1,
+    value_format = 'avro',
+    timestamp = 'ts'
+);
+
+INSERT INTO event_timestamp_stream4 (
+    k, ts, v1, v2
+) VALUES (
+    'k1', '2023-04-04T01:00:56', 0, 'a'
+);
+
+INSERT INTO event_timestamp_stream4 (
+    k, ts, v1, v2
+) VALUES (
+    'k2', '2023-04-04T01:23:07', 1, 'b'
+);
+
+SELECT k,
+       ROWTIME,
+	   TIMESTAMPTOSTRING(ROWTIME, 'yyyy-MM-dd HH:mm:ss.SSS') AS rowtime_formatted,
+       ts,
+       v1,
+       v2
+FROM event_timestamp_stream4
+EMIT CHANGES;

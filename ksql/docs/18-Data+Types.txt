@@ -1,0 +1,35 @@
+-- create a stream
+CREATE STREAM PERSON(
+	EMP_ID   STRING KEY,
+	NAME     STRING,
+    AGE      INT,
+	TITLE	 VARCHAR,
+	HEIGHT   DECIMAL(6,2),
+	FRIENDS  ARRAY<STRING>,
+	CHILDREN MAP<STRING,INT>,
+	ADDRESS  STRUCT<COUNTRY STRING, PROVINCE STRING,CITY STRING>
+)
+WITH (
+	kafka_topic='person',
+	key_format='kafka',
+	value_format='json',
+	PARTITIONS=3,
+    REPLICAS=1
+);
+
+--insert records
+insert into PERSON(emp_id,name,age,title,height,friends,children,address)
+values('P001','John',30,'VP',188.5,Array['Alex','Alice'],Map('X':=3,'Y':=6),STRUCT(COUNTRY:='CN',PROVINCE:='GD',CITY:='GZ'));
+
+insert into PERSON(emp_id,name,age,title,height,friends,children,address)
+values('P002','Ben',43,'SVP',178.5,Array['Alex','Alice'],Map('X':=3,'Y':=6),STRUCT(COUNTRY:='CN',PROVINCE:='GD'));
+
+
+select name,age,height,FRIENDS[1], CHILDREN['X'],
+address->country as country,address->province as province,address->city as city from PERSON emit changes;
+
+
+select ARRAY_LENGTH(friends) from PERSON emit changes;
+
+--drop stream
+DROP STREAM PERSON delete topic;

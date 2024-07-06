@@ -1,0 +1,30 @@
+
+drop stream if exists CSV delete topic;
+-- create topic
+bin/kafka-topics.sh --create --topic delimter_csv --create --bootstrap-server 192.168.88.130:9092 --partitions 3 --replication-factor 1
+-- produce message
+bin/kafka-console-producer.sh --topic delimter_csv --bootstrap-server 192.168.88.130:9092
+>Alex,China,38
+>Ben,India,40
+
+--create stream
+CREATE STREAM csv(
+	NAME   	 STRING,
+	ADDRESS  STRING,
+    AGE      INT
+)
+WITH (
+	KAFKA_TOPIC='delimter_csv',
+	KEY_FORMAT='NONE',
+	value_format='DELIMITED',
+	VALUE_DELIMITER=','
+);
+
+list streams;
+
+--describe stream csv
+describe csv
+
+--submit query
+set 'auto.offset.reset'='earliest';
+select * from csv;

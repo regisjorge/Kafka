@@ -1,0 +1,116 @@
+--1. create source stream
+drop stream if exists xmall_transaction delete topic;
+
+create stream if not exists xmall_transaction(
+	first_name string,
+	last_name string,
+	customer_id string,
+	credit_card_number string,
+	item_purchased string,
+	department string,
+	quantity int,
+	price decimal(6,2),
+	purchase_date timestamp,
+	zip_code string
+)
+with(
+	kafka_topic='xmall.transaction',
+	key_format='NONE',
+	value_format='JSON',
+	partitions=3,
+	replicas=1
+);
+
+--2. pii process, masking credit card number
+drop stream if exists xmall_transaction_masked delete topic;
+create stream if not exists xmall_transaction_masked
+as
+select first_name,last_name,customer_id,
+	CASE
+        WHEN CREDIT_CARD_NUMBER IS NOT NULL AND len(CREDIT_CARD_NUMBER)=19 THEN 'XXXX-XXXX-XXXX-'+substring(CREDIT_CARD_NUMBER,16,4)
+		ELSE 'XXXX-XXXX-XXXX-XXXX'
+	end credit_card_number,
+item_purchased,department,quantity,price,purchase_date,zip_code
+from xmall_transaction emit changes;
+
+--3. derived transaction pattern
+
+drop stream if exists xmall_transaction_pattern delete topic;
+create stream if not exists xmall_transaction_pattern
+with(
+	kafka_topic='xmall.pattern.transaction',
+	key_format='NONE',
+	value_format='JSON',
+	partitions=3,
+	replicas=1
+)
+as
+select zip_code,item_purchased,purchase_date,price*quantity as amount
+from xmall_transaction_masked emit changes;
+
+--4. derived transaction reward
+drop table if exists xmall_transaction_reward delete topic;
+create table if not exists xmall_transaction_reward
+with(
+	kafka_topic='xmall.rewards.transaction',
+	value_format='JSON',
+	partitions=3,
+	replicas=1
+)
+as
+select customer_id,sum(cast(price*quantity as int)) as reward_points
+from xmall_transaction_masked
+group by customer_id
+emit changes;
+
+--5. derived purchases transaction
+drop stream if exists xmall_transaction_purchases delete topic;
+create stream if not exists xmall_transaction_purchases
+with(
+	kafka_topic='xmall.purchases.transaction',
+	key_format='JSON',
+	value_format='JSON',
+	partitions=3,
+	replicas=1
+)
+as
+select *
+from xmall_transaction where price>15.0
+partition by customer_id,purchase_date
+emit changes;
+
+--6. derived coffee purchases transaction
+drop stream if exists xmall_transaction_coffee delete topic;
+create stream if not exists xmall_transaction_coffee
+with(
+	kafka_topic='xmall.coffee.transaction',
+	key_format='NONE',
+	value_format='JSON',
+	partitions=3,
+	replicas=1
+)
+as
+select *
+from xmall_transaction where UCASE(department)='COFFEE'
+emit changes;
+
+--7. derived ELECT purchases transaction
+drop stream if exists xmall_transaction_elect delete topic;
+create stream if not exists xmall_transaction_elect
+with(
+	kafka_topic='xmall.elect.transaction',
+	key_format='NONE',
+	value_format='JSON',
+	partitions=3,
+	replicas=1
+)
+as
+select *
+from xmall_transaction where UCASE(department)='ELECT'
+emit changes;
+
+--PRODUCE TEST DATA
+
+bin/kafka-console-producer.sh --bootstrap-server 192.168.88.130:9092 --topic xmall.transaction
+{"FIRST_NAME":"Alex","LAST_NAME":"Wang","CUSTOMER_ID":"C34573457443","CREDIT_CARD_NUMBER":"1234-1234-1234-8452","ITEM_PURCHASED":"coffee","DEPARTMENT":"coffee","QUANTITY":3,"PRICE":9.90,"PURCHASE_DATE":1680871610000,"ZIP_CODE":"67500"}
+{"FIRST_NAME":"Allen","LAST_NAME":"Liu","CUSTOMER_ID":"C34573457448","CREDIT_CARD_NUMBER":"1234-1234-1234-8452","ITEM_PURCHASED":"IPhone","DEPARTMENT":"elect","QUANTITY":1,"PRICE":6999,"PURCHASE_DATE":1680871610000,"ZIP_CODE":"67500"}

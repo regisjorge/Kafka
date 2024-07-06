@@ -1,0 +1,39 @@
+show streams;
+show tables;
+show streams extended;
+show tables extended;
+show topics;
+show topics extended;
+------------------------------------------
+
+DROP STREAM if exists S1;
+CREATE STREAM s1 (
+    k VARCHAR KEY,
+    ts VARCHAR,
+    v1 INT
+) WITH (
+    kafka_topic = 'maintain',
+    value_format = 'json',
+	partitions=1,
+	replicas=1
+);
+
+DROP TABLE if exists T1;
+CREATE TABLE t1 (
+    k VARCHAR PRIMARY KEY,
+    ts VARCHAR,
+    v1 INT
+) WITH (
+    kafka_topic = 'maintain',
+    value_format = 'json',
+	partitions=1,
+	replicas=1
+);
+----------------------------
+
+
+
+----------------------------------------
+--ALTER COLLECTIONS
+ALTER stream s1 ADD COLUMN v2 VARCHAR;
+ALTER table  t1 ADD COLUMN v2 VARCHAR;

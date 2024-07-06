@@ -1,0 +1,34 @@
+--create source collection
+drop stream if exists text_line delete topic;
+Create stream if not exists text_line(
+	line varchar
+) with (
+	kafka_topic='text_line', 
+	key_format='NONE',
+	value_format='kafka',
+	partitions=3,
+	REPLICAS=1
+);
+
+--split words and explode to couples of words and emit to downstream(flatMapValue)
+drop stream if exists words delete topic;
+create stream if not exists words
+with(value_format='json') as select EXPLODE(split(line,' ')) as word from text_line
+emit changes;
+
+
+--create persistent query
+drop table if exists words_count delete topic;
+create or replace table if not exists words_count
+with(
+	kafka_topic='word_count',
+	key_format='kafka',
+	value_format='json', 
+	partitions=3, 
+	replicas=1
+) as select word,count(*) as count from words group by word
+emit changes;
+
+--select the result
+set 'auto.offset.reset'='earliest';
+select * from words_count emit changes;

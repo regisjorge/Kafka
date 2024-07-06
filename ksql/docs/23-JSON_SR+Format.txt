@@ -1,0 +1,21 @@
+drop stream if exists EMPLOYEE delete topic;
+
+docker ps
+docker exec -it schema-registry /bin/bash
+-- check schema registry 
+curl -X GET http://localhost:8081/subjects |jq
+curl -X GET http://localhost:8081/subjects/employee-value/versions/ |jq
+curl -X GET http://localhost:8081/subjects/employee-value/versions/2 |jq
+
+--create topic
+bin/kafka-topics.sh --create --topic employee --create --bootstrap-server 192.168.88.130:9092 --partitions 3 --replication-factor 1
+
+--produce records by JAVA program
+
+
+CREATE STREAM EMPLOYEE
+WITH (
+	kafka_topic='employee',
+	key_format='NONE',
+	value_format='json_sr'
+);

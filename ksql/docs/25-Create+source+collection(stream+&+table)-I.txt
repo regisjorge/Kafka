@@ -1,0 +1,110 @@
+--drop stream if exists
+DROP STREAM IF EXISTS PERSON_STREAM;
+
+CREATE TYPE ADDRESS AS STRUCT<COUNTRY STRING, PROVINCE STRING,CITY STRING>;
+SHOW TYPES;
+
+-- create stream without children field
+CREATE STREAM PERSON_STREAM(
+	EMP_ID   STRING,
+	NAME     STRING,
+    AGE      INT,
+	TITLE	 VARCHAR,
+	HEIGHT   DECIMAL(6,2),
+	FRIENDS  ARRAY<STRING>,
+	ADDRESS  ADDRESS
+)
+WITH (
+	kafka_topic='person',
+	key_format='NONE',
+	value_format='json'
+);
+
+-- replace stream add children field
+CREATE OR REPLACE STREAM PERSON_STREAM(
+	EMP_ID   STRING,
+	NAME     STRING,
+    AGE      INT,
+	TITLE	 VARCHAR,
+	HEIGHT   DECIMAL(6,2),
+	FRIENDS  ARRAY<STRING>,
+	ADDRESS  ADDRESS,
+	CHILDREN MAP<STRING,INT>
+)
+WITH (
+	kafka_topic='person',
+	key_format='NONE',
+	value_format='json'
+);
+
+-- create the collection that exists will failed
+CREATE STREAM PERSON_STREAM(
+	EMP_ID   STRING,
+	NAME     STRING,
+    AGE      INT,
+	TITLE	 VARCHAR,
+	HEIGHT   DECIMAL(6,2),
+	FRIENDS  ARRAY<STRING>,
+	ADDRESS  ADDRESS
+)
+WITH (
+	kafka_topic='person',
+	key_format='NONE',
+	value_format='json'
+);
+-- Cannot add stream 'PERSON_STREAM': A stream with the same name already exists
+
+DESCRIBE PERSON_STREAM;
+
+--add if not exists will avoid error but appear warning
+CREATE STREAM IF NOT EXISTS PERSON_STREAM(
+	EMP_ID   STRING,
+	NAME     STRING,
+    AGE      INT,
+	TITLE	 VARCHAR,
+	HEIGHT   DECIMAL(6,2),
+	FRIENDS  ARRAY<STRING>,
+	ADDRESS  ADDRESS
+)
+WITH (
+	kafka_topic='person',
+	key_format='NONE',
+	value_format='json'
+);
+ Message
+--------------------------------------------------------------------------------
+ Cannot add stream `PERSON_STREAM`: A stream with the same name already exists.
+--------------------------------------------------------------------------------
+
+--pseduo columns(push query, pull query will raise error)
+
+select rowtime,rowpartition,rowoffset, * from PERSON_STREAM emit changes;
+
+
+--source stream ao colocar source diz que o stream é somente leitura
+CREATE SOURCE STREAM IF NOT EXISTS PERSON_STREAM_SOURCE(
+	EMP_ID   STRING KEY,
+	NAME     STRING,
+    AGE      INT,
+	TITLE	 VARCHAR,
+	HEIGHT   DECIMAL(6,2),
+	FRIENDS  ARRAY<STRING>,
+	CHILDREN MAP<STRING,INT>,
+    ADDRESS  ADDRESS
+)
+WITH (
+	kafka_topic='person',
+	key_format='KAFKA',
+	value_format='json'
+);
+ Message
+----------------
+ Stream created
+----------------
+insert into PERSON_STREAM_SOURCE(emp_id,name,age,title,height,friends,children,address)
+values('P001','John',30,'VP',188.5,Array['Alex','Alice'],Map('X':=3,'Y':=6),STRUCT(COUNTRY:='CN',PROVINCE:='GD',CITY:='GZ'));
+
+Cannot insert values into read-only stream: PERSON_STREAM_SOURCE
+
+-- DROP SOURCE STREAM FAILED(doc issue)
+-- source stream not support pull query(doc issue)

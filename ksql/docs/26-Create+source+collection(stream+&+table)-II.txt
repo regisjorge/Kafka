@@ -1,0 +1,52 @@
+--drop TABLE if exists
+DROP TABLE IF EXISTS PERSON_TABLE;
+-- create TABLE without children field and primary key
+CREATE TABLE PERSON_TABLE(
+	EMP_ID   STRING,
+	NAME     STRING,
+    AGE      INT,
+	TITLE	 VARCHAR,
+	HEIGHT   DECIMAL(6,2),
+	FRIENDS  ARRAY<STRING>,
+	ADDRESS  ADDRESS
+)
+WITH (
+	kafka_topic='person',
+	key_format='NONE',
+	value_format='json'
+);
+
+Tables require a PRIMARY KEY. Please define the PRIMARY KEY.
+
+-- replace TABLE add children field and primary key (necessario ter a chave primaria)
+CREATE OR REPLACE TABLE PERSON_TABLE(
+	EMP_ID   STRING PRIMARY KEY,
+	NAME     STRING,
+    AGE      INT,
+	TITLE	 VARCHAR,
+	HEIGHT   DECIMAL(6,2),
+	FRIENDS  ARRAY<STRING>,
+	CHILDREN MAP<STRING,INT>,
+	ADDRESS  ADDRESS
+)
+WITH (
+	kafka_topic='person',
+	key_format='KAFKA',
+	value_format='json'
+);
+
+insert into PERSON_TABLE(emp_id,name,age,title,height,friends,children,address)
+values('P001','John',30,'VP',198.5,Array['Alex','Alice'],Map('X':=3,'Y':=6),STRUCT(COUNTRY:='CN',PROVINCE:='GD',CITY:='GZ'));
+
+-- multiple key in streams
+CREATE STREAM keyed_stream (id VARCHAR key, c2 INTEGER key,c3 STRING)
+  WITH (kafka_topic='keyed_stream', key_format='json',value_format='json',partitions=3,replicas=1);
+
+DESCRIBE keyed_stream;
+
+-- multiple key in table
+CREATE TABLE keyed_table (id VARCHAR primary key, c2 INTEGER primary key,c3 string)
+WITH (kafka_topic='keyed_table', key_format='json',value_format='json',partitions=3,replicas=1);
+
+
+DESCRIBE keyed_stream EXTENDED;

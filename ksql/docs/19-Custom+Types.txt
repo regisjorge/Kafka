@@ -1,0 +1,32 @@
+DROP STREAM if exists PERSON delete topic;
+
+CREATE TYPE ADDRESS AS STRUCT<COUNTRY STRING, PROVINCE STRING,CITY STRING>;
+SHOW TYPES;
+
+--drop stream cascaded delete topic
+DROP STREAM IF EXISTS PERSON DELETE TOPIC;
+CREATE STREAM PERSON(
+	EMP_ID   STRING KEY,
+	NAME     STRING,
+    AGE      INT,
+	TITLE	 VARCHAR,
+	HEIGHT   DECIMAL(6,2),
+	FRIENDS  ARRAY<STRING>,
+	CHILDREN MAP<STRING,INT>,
+	ADDRESS  ADDRESS
+)
+WITH (
+	kafka_topic='person',
+	key_format='kafka',
+	value_format='json',
+	PARTITIONS=3,
+    REPLICAS=1
+);
+
+-- insert messages
+insert into PERSON(emp_id,name,age,title,height,friends,children,address)
+values('P001','John',30,'VP',188.5,Array['Alex','Alice'],Map('X':=3,'Y':=6),STRUCT(COUNTRY:='CN',PROVINCE:='GD',CITY:='GZ'));
+
+insert into PERSON(emp_id,name,age,title,height,friends,children,address)
+values('P002','Ben',43,'SVP',178.5,Array['Alex','Alice'],Map('X':=3,'Y':=6),STRUCT(COUNTRY:='CN',PROVINCE:='GD'));
+

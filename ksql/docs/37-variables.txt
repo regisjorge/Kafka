@@ -1,0 +1,32 @@
+--define and substitution variable at CLI commands
+bin/ksql --define s=XMALL_TRANSACTION_REWARD  http://192.168.88.130:8088
+show variables;
+ Variable Name | Value
+------------------------------------------
+ s             | XMALL_TRANSACTION_REWARD
+------------------------------------------
+select * from ${s};
+
+--define and substitution variable at scripts sql file
+
+cat /opt/ksqldb/scripts/define_variable.sql
+select * from ${pattern};
+
+bin/ksql --define pattern=XMALL_TRANSACTION_PATTERN --file scripts/define_variable.sql  http://192.168.88.130:8088
+
+--define variables at ksql interactive session
+
+define replicas='1';
+define partitions='3';
+define format='''JSON''';
+define my_topic='my_topic';
+
+drop stream if exists variable_stream delete topic;
+create stream  if not exists variable_stream(id int key,v1 string)
+with(
+	replicas=${replicas},
+	partitions=${partitions},
+	key_format='kafka',
+	value_format=${format},
+	kafka_topic='${my_topic}'
+);

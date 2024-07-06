@@ -1,0 +1,11 @@
+schema-registry.properties
+listeners=http://0.0.0.0:8081
+kafkastore.bootstrap.servers=PLAINTEXT://192.168.88.130:9092
+kafkastore.topic=_schemas
+debug=false
+
+#start schema-registry
+bin/schema-registry-start -daemon etc/schema-registry/schema-registry.properties
+
+ksql-server.properties
+ksql.schema.registry.url=http://192.168.88.130:8081

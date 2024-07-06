@@ -1,0 +1,18 @@
+select emp_id,name,age,title,height from person where title in ('VP','SVP');
+
+drop stream if exists person_vp_above_stream;
+create stream if not exists person_vp_above_stream 
+as select emp_id,name,age,title,height from person where title in ('VP','SVP') emit changes;
+
+drop stream if exists person_vp_above_change_key_stream;
+create stream if not exists person_vp_above_change_key_stream 
+as select emp_id,name,age,title,height from person where title in ('VP','SVP') partition by name emit changes;
+
+insert into PERSON(emp_id,name,age,title,height,friends,children,address)
+values('P007','Jeff',44,'VP',173,Array['Alex','Ben'],Map('X':=3,'Y':=6),STRUCT(COUNTRY:='HK',PROVINCE:='MM',CITY:='XY'));
+
+select title,count(*) as count from person group by title emit changes;
+
+drop table if exists person_title_table;
+
+create table if not exists person_title_table as select title,count(*) as count from person group by title emit changes;

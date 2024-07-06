@@ -1,0 +1,16 @@
+https://www.youtube.com/watch?v=u0kRK-qbopk
+
+postman
+localhost:8181/events
+
+
+//ver o schema
+http://localhost:8081/subjects
+
+{
+     "id": "DHJKWHD33",
+   	 "firstName": "Regis",
+     "middleName":"Guilherme",
+   	 "lastName": "Jorge",
+     "emailId":"regis.jorge@hotmail.com"
+}
